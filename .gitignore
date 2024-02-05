@@ -1,0 +1,6 @@
+/build
+/.vscode
+/dependencies
+
+src/glad.c
+src/stb_image.h
