@@ -15,6 +15,7 @@ add_executable(evolution
 
   src/Shader.cpp
   src/Texture.cpp
+  src/Math.cpp
 )
 
 file(COPY ${CMAKE_SOURCE_DIR}/assets DESTINATION ${CMAKE_BINARY_DIR})
@@ -40,11 +41,13 @@ else()
   target_link_libraries(
     evolution PRIVATE
     /Library/Frameworks/SDL2.framework/Versions/A/SDL2
+    # freetype
   )
 
   target_include_directories(
     evolution PRIVATE
     /Library/Frameworks/SDL2.framework/Versions/A/Headers
+    # /opt/homebrew/Cellar/freetype/2.13.2/include/freetype2
     dependencies/include
   )
 endif()
