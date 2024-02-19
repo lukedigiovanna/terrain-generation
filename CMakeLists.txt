@@ -13,9 +13,11 @@ add_executable(evolution
   src/stb_image.h
   src/main.cpp
 
-  src/Shader.cpp
-  src/Texture.cpp
   src/Math.cpp
+  src/Mesh.cpp
+  src/Shader.cpp
+  src/Terrain.cpp
+  src/Texture.cpp
 )
 
 file(COPY ${CMAKE_SOURCE_DIR}/assets DESTINATION ${CMAKE_BINARY_DIR})

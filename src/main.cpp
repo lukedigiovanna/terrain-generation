@@ -15,6 +15,8 @@
 #include "Shader.h"
 #include "Texture.h"
 #include "Math.h"
+#include "Terrain.h"
+#include "Mesh.h"
 
 int resizeEventWatcher(void* data, SDL_Event* event) {
     if (event->type == SDL_WINDOWEVENT && event->window.event == SDL_WINDOWEVENT_RESIZED) {
@@ -26,33 +28,6 @@ int resizeEventWatcher(void* data, SDL_Event* event) {
 
     return 0;
 }
-
-class Mesh {
-private:
-    unsigned int vao;
-    unsigned int numVertices;
-public:
-    Mesh(float* data, int numVertices) {
-        unsigned int vbo;
-        glGenBuffers(1, &vbo);
-        glGenVertexArrays(1, &vao);
-        glBindBuffer(GL_ARRAY_BUFFER, vbo);
-        glBindVertexArray(vao);
-        glBufferData(GL_ARRAY_BUFFER, sizeof(float) * 8 * numVertices, data, GL_STATIC_DRAW);
-        glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*) 0);
-        glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*) (3 * sizeof(float)));
-        glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*) (6 * sizeof(float)));
-        glEnableVertexAttribArray(0);
-        glEnableVertexAttribArray(1);
-        glEnableVertexAttribArray(2);
-        this->numVertices = numVertices;
-    }
-
-    void render() {
-        glBindVertexArray(vao);
-        glDrawArrays(GL_TRIANGLES, 0, numVertices);
-    }
-};
 
 struct Part {
     Mesh* mesh;
@@ -167,81 +142,42 @@ int program() {
         1.0f, 0.0f, 1.0f,  0.0f, 1.0f, 0.0f,  1.0f, 1.0f,
     };
     Mesh plane(planeData, 6);
-
-    const int terrainSize = 100;
-    float latticePoints[terrainSize + 1][terrainSize + 1];
-    for (int i = 0; i < terrainSize + 1; i++) {
-        for (int j = 0; j < terrainSize + 1; j++) {
-            float s = 18.45231f;
-            float f = math::getPerlinNoise(i / s, j / s, 5000);
-            latticePoints[i][j] = f * f * 52 - 2;
-            // latticePoints[i][j] = f;
-        }
-    }
-    float terrainData[terrainSize * terrainSize * 48];
-    int ti = 0;
-    for (int i = 0; i < terrainSize; i++) {
-        for (int j = 0; j < terrainSize; j++) {
-            float s = 1.0f;
-            float fi = static_cast<float>(i) * s, fj = static_cast<float>(j) * s;
-            glm::vec3 diag(1.0f, latticePoints[i + 1][j + 1] - latticePoints[i][j], 1.0f);
-            glm::vec3 right(1.0f, latticePoints[i + 1][j] - latticePoints[i][j], 0.0f);
-            glm::vec3 up(0.0f, latticePoints[i][j + 1] - latticePoints[i][j], 1.0f);
-            glm::vec3 norm1 = glm::normalize(glm::cross(diag, right));
-            if (norm1.y < 0) norm1 = -norm1;
-            glm::vec3 norm2 = glm::normalize(glm::cross(diag, up));
-            if (norm2.y < 0) norm2 = -norm2;
-            // std::cout << norm1.x << ", " << norm1.y << ", " << norm1.z << "\n";
-            float triangles[48] = {
-                fi,     latticePoints[i][j],         fj,      norm1.x, norm1.y, norm1.z,  0.0f, 0.0f,
-                fi + s, latticePoints[i + 1][j],     fj,      norm1.x, norm1.y, norm1.z,  1.0f, 0.0f,
-                fi + s, latticePoints[i + 1][j + 1], fj + s,  norm1.x, norm1.y, norm1.z,  1.0f, 1.0f,
-
-                fi,     latticePoints[i][j],         fj,      norm2.x, norm2.y, norm2.z,  0.0f, 0.0f,
-                fi,     latticePoints[i][j + 1],     fj + s,  norm2.x, norm2.y, norm2.z,  0.0f, 1.0f,
-                fi + s, latticePoints[i + 1][j + 1], fj + s,  norm2.x, norm2.y, norm2.z,  1.0f, 1.0f,
-            };
-            for (int i = 0; i < 48; i++) {
-                terrainData[ti + i] = triangles[i];
-            }
-            ti += 48;
-        }
-    }
-    Mesh terrainMesh(terrainData, terrainSize * terrainSize * 6);
     
     Part treeTrunk = {&cubeMesh, &wood, glm::vec3(0, 2.5, 0), glm::vec3(0.4f, 5, 0.4f)};
     Part treeLeaves = {&cubeMesh, &grass, glm::vec3(0, 6.5, 0), glm::vec3(3, 3, 3)};
     Model treeModel{{&treeTrunk, &treeLeaves}};
 
     std::vector<Object> trees;
-
     for (int i = 0; i < 100; i++) {
         // gen random position
         float x = math::randf(0, 100), y = math::randf(0, 100);
         // need to calculate the position of the terain at this point
         // 1) find the corners of the lattice points
-        int x0 = static_cast<int>(x);
-        int x1 = x0 + 1;
-        int y0 = static_cast<int>(y);
-        int y1 = y0 + 1;
-        // crude: weighted average of lattice points
-        float bl = latticePoints[x0][y0];
-        float br = latticePoints[x1][y0];
-        float tl = latticePoints[x0][y1];
-        float tr = latticePoints[x1][y1];
-        float height = (bl + br + tl + tr) / 4.0f;
-        if (height < 0) {
-            continue;
-        }
+        // int x0 = static_cast<int>(x);
+        // int x1 = x0 + 1;
+        // int y0 = static_cast<int>(y);
+        // int y1 = y0 + 1;
+        // // crude: weighted average of lattice points
+        // float bl = latticePoints[x0][y0];
+        // float br = latticePoints[x1][y0];
+        // float tl = latticePoints[x0][y1];
+        // float tr = latticePoints[x1][y1];
+        // float height = (bl + br + tl + tr) / 4.0f;
+        // if (height < 0) {
+        //     continue;
+        // }
         // put a tree there
         trees.push_back({
             .model=&treeModel,
-            .pos=glm::vec3(x,height,y),
+            .pos=glm::vec3(x,0,y),
             .scale=glm::vec3(1,1,1),
             .angle=0,
             .velocity=glm::vec3(0,0,0)
         });
     }
+
+    Terrain terrain(3284);
+    // TerrainCell cell(0, 0, 5000);
 
     bool gameActive = true;
 
@@ -306,7 +242,7 @@ int program() {
         float modGravity = gravity;
         if (cameraPosition.y <= 2.0f) {
             speed /= 2.0f;
-            modGravity /= 2.0f;
+            modGravity /= 6.0f;
         }
         glm::vec3 cameraForwardProjectXZ = glm::normalize(glm::vec3(cameraForward.x, 0.0f, cameraForward.z));
         if (keydown[SDLK_w]) cameraVelocity += cameraForwardProjectXZ * speed;
@@ -320,16 +256,18 @@ int program() {
         cameraVelocity.y -= modGravity * dt;
         cameraPosition += cameraVelocity * dt;
 
-        int x0 = static_cast<int>(cameraPosition.x);
-        int x1 = x0 + 1;
-        int y0 = static_cast<int>(cameraPosition.z);
-        int y1 = y0 + 1;
-        // crude: weighted average of lattice points
-        float bl = latticePoints[x0][y0];
-        float br = latticePoints[x1][y0];
-        float tl = latticePoints[x0][y1];
-        float tr = latticePoints[x1][y1];
-        float height = (bl + br + tl + tr) / 4.0f;
+        // int x0 = static_cast<int>(cameraPosition.x);
+        // int x1 = x0 + 1;
+        // int y0 = static_cast<int>(cameraPosition.z);
+        // int y1 = y0 + 1;
+        // // crude: weighted average of lattice points
+        // float bl = latticePoints[x0][y0];
+        // float br = latticePoints[x1][y0];
+        // float tl = latticePoints[x0][y1];
+        // float tr = latticePoints[x1][y1];
+        // float height = (bl + br + tl + tr) / 4.0f;
+
+        float height = 0.0f;
 
         if (cameraPosition.y <= height + 2.0f) {
             cameraVelocity.y = 0;
@@ -354,7 +292,9 @@ int program() {
 
         // terrain
         grass.bind();
-        terrainMesh.render();
+        terrain.render(objectShader, cameraPosition.x, cameraPosition.z);
+        // objectShader.setMatrix4("model", model);
+        // cell.getMesh().render();
 
         // render the tree model
         for (const auto & tree : trees) {
