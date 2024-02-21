@@ -38,11 +38,11 @@ struct Part {
 
 using Model = std::vector<Part*>;
 
-struct Object {
+struct WorldObject {
     Model* model;
 
-    glm::vec3 scale;
     glm::vec3 pos;
+    glm::vec3 scale;
     glm::vec3 velocity;
     float angle;
 };
@@ -76,6 +76,12 @@ int program() {
     Texture wood("assets/wood.png");
     Texture grass("assets/grass.png");
     Texture galaxy("assets/galaxy.png");
+
+    VertexAttribSet shapeAttributeSet = {
+        {GL_FLOAT, 3, sizeof(float)},
+        {GL_FLOAT, 3, sizeof(float)},
+        {GL_FLOAT, 2, sizeof(float)}
+    };
 
     float cube[288] = {
         // front face
@@ -130,7 +136,7 @@ int program() {
         -0.5f,  0.5f,  -0.5f,  -1.0f, 0.0f, 0.0f,   1.0f, 0.0f,
         -0.5f, -0.5f,  -0.5f,  -1.0f, 0.0f, 0.0f,   0.0f, 0.0f,
     };
-    Mesh cubeMesh(cube, 36);
+    Mesh cubeMesh(cube, 36, shapeAttributeSet);
 
     float planeData[48] = {
         0.0f, 0.0f, 0.0f,  0.0f, 1.0f, 0.0f,  0.0f, 0.0f,
@@ -141,13 +147,15 @@ int program() {
         0.0f, 0.0f, 1.0f,  0.0f, 1.0f, 0.0f,  0.0f, 1.0f,
         1.0f, 0.0f, 1.0f,  0.0f, 1.0f, 0.0f,  1.0f, 1.0f,
     };
-    Mesh plane(planeData, 6);
+    Mesh plane(planeData, 6, shapeAttributeSet);
     
     Part treeTrunk = {&cubeMesh, &wood, glm::vec3(0, 2.5, 0), glm::vec3(0.4f, 5, 0.4f)};
     Part treeLeaves = {&cubeMesh, &grass, glm::vec3(0, 6.5, 0), glm::vec3(3, 3, 3)};
     Model treeModel{{&treeTrunk, &treeLeaves}};
 
-    std::vector<Object> trees;
+    Terrain terrain(3284);
+
+    std::vector<WorldObject> trees;
     for (int i = 0; i < 100; i++) {
         // gen random position
         float x = math::randf(0, 100), y = math::randf(0, 100);
@@ -167,17 +175,15 @@ int program() {
         //     continue;
         // }
         // put a tree there
-        trees.push_back({
-            .model=&treeModel,
-            .pos=glm::vec3(x,0,y),
-            .scale=glm::vec3(1,1,1),
-            .angle=0,
-            .velocity=glm::vec3(0,0,0)
-        });
+        WorldObject tree = {
+            &treeModel,
+            glm::vec3(x,terrain.getHeight(x,y),y),
+            glm::vec3(1,1,1),
+            glm::vec3(0,0,0),
+            0,
+        }; 
+        trees.push_back(tree);
     }
-
-    Terrain terrain(3284);
-    // TerrainCell cell(0, 0, 5000);
 
     bool gameActive = true;
 
@@ -336,10 +342,10 @@ int program() {
 #ifdef _WIN32
 #include <windows.h>
 int WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int nCmdShow) {
-    progam();    
+    return program();    
 }
 #else
 int main() {
-    program();
+    return program();
 }
 #endif
