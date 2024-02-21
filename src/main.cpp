@@ -65,17 +65,23 @@ int program() {
         throw std::runtime_error("Failed to initialize GLAD");
     }
 
+    int maxTexSize;
+    glGetIntegerv(GL_MAX_TEXTURE_SIZE, &maxTexSize);
+    std::cout << maxTexSize << "\n";
+
     glEnable(GL_BLEND);
     glEnable(GL_DEPTH_TEST);  
     glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
     Shader waterShader("assets/vs.glsl", "assets/water_fs.glsl");
     Shader objectShader("assets/vs.glsl", "assets/fs.glsl");
+    Shader terrainShader("assets/terrain_vs.glsl", "assets/terrain_fs.glsl");
 
     Texture smile("assets/smile.png");
     Texture wood("assets/wood.png");
     Texture grass("assets/grass.png");
     Texture galaxy("assets/galaxy.png");
+    Texture minecraft("assets/minecraft.png");
 
     VertexAttribSet shapeAttributeSet = {
         {GL_FLOAT, 3, sizeof(float)},
@@ -159,21 +165,6 @@ int program() {
     for (int i = 0; i < 100; i++) {
         // gen random position
         float x = math::randf(0, 100), y = math::randf(0, 100);
-        // need to calculate the position of the terain at this point
-        // 1) find the corners of the lattice points
-        // int x0 = static_cast<int>(x);
-        // int x1 = x0 + 1;
-        // int y0 = static_cast<int>(y);
-        // int y1 = y0 + 1;
-        // // crude: weighted average of lattice points
-        // float bl = latticePoints[x0][y0];
-        // float br = latticePoints[x1][y0];
-        // float tl = latticePoints[x0][y1];
-        // float tr = latticePoints[x1][y1];
-        // float height = (bl + br + tl + tr) / 4.0f;
-        // if (height < 0) {
-        //     continue;
-        // }
         // put a tree there
         WorldObject tree = {
             &treeModel,
@@ -187,7 +178,7 @@ int program() {
 
     bool gameActive = true;
 
-    glm::vec3 cameraPosition(25.0f, 0.0f, 25.0f);
+    glm::vec3 cameraPosition(2500.0f, 0.0f, 2500.0f);
     glm::vec3 cameraForward(0.0f, 0.0f, -1.0f);
     glm::vec3 cameraRight(1.0f, 0.0f, 0.0f);
     glm::vec3 cameraVelocity(0.0f);
@@ -262,18 +253,7 @@ int program() {
         cameraVelocity.y -= modGravity * dt;
         cameraPosition += cameraVelocity * dt;
 
-        // int x0 = static_cast<int>(cameraPosition.x);
-        // int x1 = x0 + 1;
-        // int y0 = static_cast<int>(cameraPosition.z);
-        // int y1 = y0 + 1;
-        // // crude: weighted average of lattice points
-        // float bl = latticePoints[x0][y0];
-        // float br = latticePoints[x1][y0];
-        // float tl = latticePoints[x0][y1];
-        // float tr = latticePoints[x1][y1];
-        // float height = (bl + br + tl + tr) / 4.0f;
-
-        float height = 0.0f;
+        float height = terrain.getHeight(cameraPosition.x, cameraPosition.z);
 
         if (cameraPosition.y <= height + 2.0f) {
             cameraVelocity.y = 0;
@@ -289,18 +269,23 @@ int program() {
         glm::mat4 proj = glm::perspective(90.0f, scWidth / static_cast<float>(scHeight), 0.1f, 1000.0f);
         glm::mat4 view = glm::lookAt(cameraPosition, cameraPosition + cameraForward, glm::vec3(0.0f, 1.0f, 0.0f));
 
+        
+
+        terrainShader.use();
+        terrainShader.setVec3("lightPosition", cameraPosition);
+        terrainShader.setMatrix4("projection", proj);
+        terrainShader.setMatrix4("view", view);
+        terrainShader.setVec2("spriteSheetSize", 24, 34);
+        // terrain
+        minecraft.bind();
+        terrain.render(objectShader, cameraPosition.x, cameraPosition.z);
+        
         objectShader.use();
 
         objectShader.setVec3("lightPosition", cameraPosition);
         objectShader.setMatrix4("projection", proj);
         objectShader.setMatrix4("view", view);
         objectShader.setMatrix4("model", glm::mat4(1.0f));
-
-        // terrain
-        grass.bind();
-        terrain.render(objectShader, cameraPosition.x, cameraPosition.z);
-        // objectShader.setMatrix4("model", model);
-        // cell.getMesh().render();
 
         // render the tree model
         for (const auto & tree : trees) {

@@ -6,15 +6,16 @@
 #include <unordered_map>
 #include <memory>
 
-#define TERRAIN_RESOLUTION 0.5f // The ammount of world space between each lattice point
-#define TERRAIN_CELL_SIZE 10
+#define TERRAIN_RESOLUTION 1 // Number of lattice points in 1 unit along an axis.
+#define TERRAIN_CELL_SIZE 32
+#define TERRAIN_POINTS_PER_CELL TERRAIN_RESOLUTION * TERRAIN_CELL_SIZE
 #define TERRAIN_RENDER_DISTANCE 10
 #define TERRAIN_CACHE_CAPACITY 25
 
 class TerrainCell {
 private:
     int x, z;
-    float latticePoints[TERRAIN_CELL_SIZE + 1][TERRAIN_CELL_SIZE + 1];
+    float latticePoints[TERRAIN_POINTS_PER_CELL + 1][TERRAIN_POINTS_PER_CELL + 1];
     std::unique_ptr<Mesh> mesh;
 public:
     // calling the constructor will generate the mesh for this terrain cell
