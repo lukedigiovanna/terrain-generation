@@ -12,7 +12,7 @@ uniform mat4 model;
 out vec2 TexCoord;
 out vec3 Position;
 out vec3 Normal;
-out float Index;
+flat out float Index;
 
 void main() {
     TexCoord = inTexCoord;

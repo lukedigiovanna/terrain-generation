@@ -8,6 +8,9 @@
 
 #include "Math.h"
 
+#include "Mesh.h"
+#include "Shader.h"
+
 static const VertexAttribSet terrainAttributeSet = {
     {GL_FLOAT, 3, sizeof(float)},
     {GL_FLOAT, 3, sizeof(float)},
@@ -61,12 +64,12 @@ TerrainCell::TerrainCell(int x, int z, int seed) : x(x), z(z) {
             float wi = fi - i / TERRAIN_RESOLUTION;
             float wj = fj - j / TERRAIN_RESOLUTION;
             float triangles[floatsPerLatticeCell] = {
-                fi,     latticePoints[i][j],         fj,      norm1.x, norm1.y, norm1.z,  wi,     wj,       getTexture(latticePoints[i][j]),        
-                fi + s, latticePoints[i + 1][j],     fj,      norm1.x, norm1.y, norm1.z,  wi + s, wj,       getTexture(latticePoints[i + 1][j]),    
-                fi + s, latticePoints[i + 1][j + 1], fj + s,  norm1.x, norm1.y, norm1.z,  wi + s, wj + s,   getTexture(latticePoints[i + 1][j + 1]),
-                fi,     latticePoints[i][j],         fj,      norm2.x, norm2.y, norm2.z,  wi,     wj,       getTexture(latticePoints[i][j]),        
-                fi,     latticePoints[i][j + 1],     fj + s,  norm2.x, norm2.y, norm2.z,  wi,     wj + s,   getTexture(latticePoints[i][j + 1]),    
-                fi + s, latticePoints[i + 1][j + 1], fj + s,  norm2.x, norm2.y, norm2.z,  wi + s, wj + s,   getTexture(latticePoints[i + 1][j + 1]),
+                fi,     latticePoints[i][j],         fj,      norm1.x, norm1.y, norm1.z,  wi,     wj,       getTexture(latticePoints[i][j]),//getTexture(latticePoints[i][j]),        
+                fi + s, latticePoints[i + 1][j],     fj,      norm1.x, norm1.y, norm1.z,  wi + s, wj,       getTexture(latticePoints[i][j]),//getTexture(latticePoints[i + 1][j]),    
+                fi + s, latticePoints[i + 1][j + 1], fj + s,  norm1.x, norm1.y, norm1.z,  wi + s, wj + s,   getTexture(latticePoints[i][j]),//getTexture(latticePoints[i + 1][j + 1]),
+                fi,     latticePoints[i][j],         fj,      norm2.x, norm2.y, norm2.z,  wi,     wj,       getTexture(latticePoints[i][j]),//getTexture(latticePoints[i][j]),        
+                fi,     latticePoints[i][j + 1],     fj + s,  norm2.x, norm2.y, norm2.z,  wi,     wj + s,   getTexture(latticePoints[i][j]),//getTexture(latticePoints[i][j + 1]),    
+                fi + s, latticePoints[i + 1][j + 1], fj + s,  norm2.x, norm2.y, norm2.z,  wi + s, wj + s,   getTexture(latticePoints[i][j]),//getTexture(latticePoints[i + 1][j + 1]),
             };
             for (int i = 0; i < floatsPerLatticeCell; i++) {
                 terrainData[ti + i] = triangles[i];
@@ -105,7 +108,7 @@ Terrain::Terrain(int seed) : seed(seed) {
 
 #define TERRAIN_HASH(cx, cz) (cx * 32768 + cz)
 
-void Terrain::render(Shader& shader, float x, float z) {
+void Terrain::render(Shader& terrainShader, float x, float z) {
     int cellX = static_cast<int>(x / TERRAIN_CELL_SIZE);
     int cellZ = static_cast<int>(z / TERRAIN_CELL_SIZE);
     for (int cx = cellX - TERRAIN_RENDER_DISTANCE; cx <= cellX + TERRAIN_RENDER_DISTANCE; cx++) {
@@ -120,11 +123,11 @@ void Terrain::render(Shader& shader, float x, float z) {
             // setup model matrix
             glm::mat4 model(1.0f);
             model = glm::translate(model, glm::vec3(cx * TERRAIN_CELL_SIZE, 0, cz * TERRAIN_CELL_SIZE));
-            shader.setMatrix4("model", model);
+            terrainShader.setMatrix4("model", model);
             // render 
             tcell.getMesh().render();
         }
-    }   
+    }  
 }
 
 float Terrain::getHeight(float x, float z) {

@@ -6,10 +6,10 @@
 #include <unordered_map>
 #include <memory>
 
-#define TERRAIN_RESOLUTION 1 // Number of lattice points in 1 unit along an axis.
-#define TERRAIN_CELL_SIZE 32
+#define TERRAIN_RESOLUTION 8 // Number of lattice points in 1 unit along an axis.
+#define TERRAIN_CELL_SIZE 8
 #define TERRAIN_POINTS_PER_CELL TERRAIN_RESOLUTION * TERRAIN_CELL_SIZE
-#define TERRAIN_RENDER_DISTANCE 10
+#define TERRAIN_RENDER_DISTANCE 8
 #define TERRAIN_CACHE_CAPACITY 25
 
 class TerrainCell {
@@ -36,5 +36,5 @@ public:
     // Queries the terrain cells to find the precise height of the terrain at the given x,z coordinate
     float getHeight(float x, float z);
     // Given some x, z we will render the surrounding cells in their proper place
-    void render(Shader& shader, float x, float z);
+    void render(Shader& terrainShader, float x, float z);
 };

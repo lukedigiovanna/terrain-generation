@@ -270,9 +270,10 @@ int program() {
         glm::mat4 view = glm::lookAt(cameraPosition, cameraPosition + cameraForward, glm::vec3(0.0f, 1.0f, 0.0f));
 
         
+        glm::vec3 lightPos = cameraPosition + glm::vec3(0, 10, 0);
 
         terrainShader.use();
-        terrainShader.setVec3("lightPosition", cameraPosition);
+        terrainShader.setVec3("lightPosition", lightPos);
         terrainShader.setMatrix4("projection", proj);
         terrainShader.setMatrix4("view", view);
         terrainShader.setVec2("spriteSheetSize", 24, 34);
@@ -282,7 +283,7 @@ int program() {
         
         objectShader.use();
 
-        objectShader.setVec3("lightPosition", cameraPosition);
+        objectShader.setVec3("lightPosition", lightPos);
         objectShader.setMatrix4("projection", proj);
         objectShader.setMatrix4("view", view);
         objectShader.setMatrix4("model", glm::mat4(1.0f));
@@ -311,7 +312,13 @@ int program() {
         waterShader.use();
         waterShader.setMatrix4("projection", proj);
         waterShader.setMatrix4("view", view);
-        waterShader.setMatrix4("model", glm::scale(glm::translate(glm::mat4(1.0f),glm::vec3(0.0f, -0.5f, 0.0f)), glm::vec3(100, 1, 100)));
+        int waterSize = 200;
+        waterShader.setMatrix4("model", glm::scale(
+            glm::translate(
+                glm::mat4(1.0f),
+                glm::vec3(cameraPosition.x - waterSize / 2, 0, cameraPosition.z - waterSize / 2)), 
+            glm::vec3(waterSize, 1, waterSize)
+        ));
 
         waterShader.setFloat("t", currTime);
         plane.render();
