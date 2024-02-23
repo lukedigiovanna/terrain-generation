@@ -29,13 +29,6 @@ Texture::Texture(std::string const& imagePath) {
     this->unbind();
 }
 
-Texture::Texture() {
-    // leaves all data unitialized.
-    // this constructor is useful for statically allocating
-    // textures objects and then later reassigning their
-    // memory to an allocated texture.
-}
-
 Texture::~Texture() {
     // glDeleteTextures(1, &this->texture);
 }
@@ -53,4 +46,18 @@ void Texture::bind(Shader const& shader, std::string const& uniformName) const {
 
 void Texture::unbind() const {
     glBindTexture(GL_TEXTURE_2D, 0);
+}
+
+TexPtr textures::SMILE;
+TexPtr textures::WOOD;
+TexPtr textures::GRASS;
+TexPtr textures::GALAXY;
+TexPtr textures::MINECRAFT;
+
+void textures::initialize() {
+    SMILE = std::make_unique<Texture>("assets/smile.png");
+    WOOD = std::make_unique<Texture>("assets/wood.png");
+    GRASS = std::make_unique<Texture>("assets/grass.png");
+    GALAXY = std::make_unique<Texture>("assets/galaxy.png");
+    MINECRAFT = std::make_unique<Texture>("assets/minecraft.png");
 }

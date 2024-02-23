@@ -18,6 +18,7 @@ add_executable(evolution
   src/Shader.cpp
   src/Terrain.cpp
   src/Texture.cpp
+  src/WorldObject.cpp
 )
 
 file(COPY ${CMAKE_SOURCE_DIR}/assets DESTINATION ${CMAKE_BINARY_DIR})

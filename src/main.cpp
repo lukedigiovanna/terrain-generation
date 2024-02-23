@@ -17,6 +17,7 @@
 #include "Math.h"
 #include "Terrain.h"
 #include "Mesh.h"
+#include "WorldObject.h"
 
 int resizeEventWatcher(void* data, SDL_Event* event) {
     if (event->type == SDL_WINDOWEVENT && event->window.event == SDL_WINDOWEVENT_RESIZED) {
@@ -28,24 +29,6 @@ int resizeEventWatcher(void* data, SDL_Event* event) {
 
     return 0;
 }
-
-struct Part {
-    Mesh* mesh;
-    Texture* texture;
-    glm::vec3 offsetPosition;
-    glm::vec3 scale;
-};
-
-using Model = std::vector<Part*>;
-
-struct WorldObject {
-    Model* model;
-
-    glm::vec3 pos;
-    glm::vec3 scale;
-    glm::vec3 velocity;
-    float angle;
-};
 
 int program() {
     stbi_set_flip_vertically_on_load(true);  
@@ -65,6 +48,10 @@ int program() {
         throw std::runtime_error("Failed to initialize GLAD");
     }
 
+    meshes::initialize();
+    textures::initialize();
+    models::initialize();
+
     int maxTexSize;
     glGetIntegerv(GL_MAX_TEXTURE_SIZE, &maxTexSize);
     std::cout << maxTexSize << "\n";
@@ -77,87 +64,7 @@ int program() {
     Shader objectShader("assets/vs.glsl", "assets/fs.glsl");
     Shader terrainShader("assets/terrain_vs.glsl", "assets/terrain_fs.glsl");
 
-    Texture smile("assets/smile.png");
-    Texture wood("assets/wood.png");
-    Texture grass("assets/grass.png");
-    Texture galaxy("assets/galaxy.png");
-    Texture minecraft("assets/minecraft.png");
-
-    VertexAttribSet shapeAttributeSet = {
-        {GL_FLOAT, 3, sizeof(float)},
-        {GL_FLOAT, 3, sizeof(float)},
-        {GL_FLOAT, 2, sizeof(float)}
-    };
-
-    float cube[288] = {
-        // front face
-        -0.5f, -0.5f,  0.5f,  0.0f, 0.0f, 1.0f,  0.0f, 0.0f,
-         0.5f,  0.5f,  0.5f,  0.0f, 0.0f, 1.0f,  1.0f, 1.0f,
-        -0.5f,  0.5f,  0.5f,  0.0f, 0.0f, 1.0f,  0.0f, 1.0f,
-
-         0.5f,  0.5f,  0.5f,  0.0f, 0.0f, 1.0f,  1.0f, 1.0f,
-         0.5f, -0.5f,  0.5f,  0.0f, 0.0f, 1.0f,  1.0f, 0.0f,
-        -0.5f, -0.5f,  0.5f,  0.0f, 0.0f, 1.0f,  0.0f, 0.0f,
-
-        // back face
-        -0.5f, -0.5f,  -0.5f,  0.0f, 0.0f, -1.0f,  0.0f, 0.0f,
-         0.5f,  0.5f,  -0.5f,  0.0f, 0.0f, -1.0f,  1.0f, 1.0f,
-        -0.5f,  0.5f,  -0.5f,  0.0f, 0.0f, -1.0f,  0.0f, 1.0f,
-
-         0.5f,  0.5f,  -0.5f,  0.0f, 0.0f, -1.0f,  1.0f, 1.0f,
-         0.5f, -0.5f,  -0.5f,  0.0f, 0.0f, -1.0f,  1.0f, 0.0f,
-        -0.5f, -0.5f,  -0.5f,  0.0f, 0.0f, -1.0f,  0.0f, 0.0f,
-
-        // top face
-        -0.5f,  0.5f, -0.5f,   0.0f, 1.0f, 0.0f,  0.0f, 0.0f,
-         0.5f,  0.5f,  0.5f,   0.0f, 1.0f, 0.0f,  1.0f, 1.0f,
-        -0.5f,  0.5f,  0.5f,   0.0f, 1.0f, 0.0f,  0.0f, 1.0f,
-
-         0.5f,  0.5f,  0.5f,   0.0f, 1.0f, 0.0f,  1.0f, 1.0f,
-         0.5f,  0.5f, -0.5f,   0.0f, 1.0f, 0.0f,  1.0f, 0.0f,
-        -0.5f,  0.5f, -0.5f,   0.0f, 1.0f, 0.0f,  0.0f, 0.0f,
-
-        // bottom face
-        -0.5f, -0.5f, -0.5f,   0.0f, -1.0f, 0.0f,  0.0f, 0.0f,
-         0.5f, -0.5f,  0.5f,   0.0f, -1.0f, 0.0f,  1.0f, 1.0f,
-        -0.5f, -0.5f,  0.5f,   0.0f, -1.0f, 0.0f,  0.0f, 1.0f,
-
-         0.5f, -0.5f,  0.5f,   0.0f, -1.0f, 0.0f,  1.0f, 1.0f,
-         0.5f, -0.5f, -0.5f,   0.0f, -1.0f, 0.0f,  1.0f, 0.0f,
-        -0.5f, -0.5f, -0.5f,   0.0f, -1.0f, 0.0f,  0.0f, 0.0f,
-
-        // right face
-        0.5f, -0.5f,  -0.5f,   1.0f, 0.0f, 0.0f,  0.0f, 0.0f,
-        0.5f,  0.5f,   0.5f,   1.0f, 0.0f, 0.0f,  1.0f, 1.0f,
-        0.5f, -0.5f,   0.5f,   1.0f, 0.0f, 0.0f,  0.0f, 1.0f,
-        0.5f,  0.5f,   0.5f,   1.0f, 0.0f, 0.0f,  1.0f, 1.0f,
-        0.5f,  0.5f,  -0.5f,   1.0f, 0.0f, 0.0f,  1.0f, 0.0f,
-        0.5f, -0.5f,  -0.5f,   1.0f, 0.0f, 0.0f,  0.0f, 0.0f,
-
-        // left face
-        -0.5f, -0.5f,  -0.5f,  -1.0f, 0.0f, 0.0f,   0.0f, 0.0f,
-        -0.5f,  0.5f,   0.5f,  -1.0f, 0.0f, 0.0f,   1.0f, 1.0f,
-        -0.5f, -0.5f,   0.5f,  -1.0f, 0.0f, 0.0f,   0.0f, 1.0f,
-        -0.5f,  0.5f,   0.5f,  -1.0f, 0.0f, 0.0f,   1.0f, 1.0f,
-        -0.5f,  0.5f,  -0.5f,  -1.0f, 0.0f, 0.0f,   1.0f, 0.0f,
-        -0.5f, -0.5f,  -0.5f,  -1.0f, 0.0f, 0.0f,   0.0f, 0.0f,
-    };
-    Mesh cubeMesh(cube, 36, shapeAttributeSet);
-
-    float planeData[48] = {
-        0.0f, 0.0f, 0.0f,  0.0f, 1.0f, 0.0f,  0.0f, 0.0f,
-        1.0f, 0.0f, 0.0f,  0.0f, 1.0f, 0.0f,  1.0f, 0.0f,
-        1.0f, 0.0f, 1.0f,  0.0f, 1.0f, 0.0f,  1.0f, 1.0f,
-        
-        0.0f, 0.0f, 0.0f,  0.0f, 1.0f, 0.0f,  0.0f, 0.0f,
-        0.0f, 0.0f, 1.0f,  0.0f, 1.0f, 0.0f,  0.0f, 1.0f,
-        1.0f, 0.0f, 1.0f,  0.0f, 1.0f, 0.0f,  1.0f, 1.0f,
-    };
-    Mesh plane(planeData, 6, shapeAttributeSet);
-    
-    Part treeTrunk = {&cubeMesh, &wood, glm::vec3(0, 2.5, 0), glm::vec3(0.4f, 5, 0.4f)};
-    Part treeLeaves = {&cubeMesh, &grass, glm::vec3(0, 6.5, 0), glm::vec3(3, 3, 3)};
-    Model treeModel{{&treeTrunk, &treeLeaves}};
+    std::unique_ptr<Part> part = std::make_unique<Part>(Part{*meshes::CUBE, *textures::WOOD, glm::vec3(0), glm::vec3(0)});
 
     Terrain terrain(3284);
 
@@ -167,7 +74,7 @@ int program() {
         float x = math::randf(0, 100), y = math::randf(0, 100);
         // put a tree there
         WorldObject tree = {
-            &treeModel,
+            models::TREE,
             glm::vec3(x,terrain.getHeight(x,y),y),
             glm::vec3(1,1,1),
             glm::vec3(0,0,0),
@@ -178,7 +85,7 @@ int program() {
 
     bool gameActive = true;
 
-    glm::vec3 cameraPosition(2500.0f, 0.0f, 2500.0f);
+    glm::vec3 cameraPosition(0.0f, 0.0f, 0.0f);
     glm::vec3 cameraForward(0.0f, 0.0f, -1.0f);
     glm::vec3 cameraRight(1.0f, 0.0f, 0.0f);
     glm::vec3 cameraVelocity(0.0f);
@@ -278,7 +185,7 @@ int program() {
         terrainShader.setMatrix4("view", view);
         terrainShader.setVec2("spriteSheetSize", 24, 34);
         // terrain
-        minecraft.bind();
+        textures::MINECRAFT->bind();
         terrain.render(objectShader, cameraPosition.x, cameraPosition.z);
         
         objectShader.use();
@@ -290,13 +197,13 @@ int program() {
 
         // render the tree model
         for (const auto & tree : trees) {
-            for (const auto & part : *tree.model) {
+            for (const auto & part : tree.model) {
                 glm::mat4 model(1.0f);
                 model = glm::translate(model, tree.pos + part->offsetPosition);
                 model = glm::scale(model, tree.scale + part->scale);
                 objectShader.setMatrix4("model", model);
-                part->texture->bind();
-                part->mesh->render();
+                part->texture.bind();
+                part->mesh.render();
             };
         }
 
@@ -305,8 +212,8 @@ int program() {
         model = glm::translate(model, cameraPosition);
         model = glm::scale(model, glm::vec3(250.0f, 250.0f, 250.0f));
         objectShader.setMatrix4("model", model);
-        galaxy.bind();
-        cubeMesh.render();
+        textures::GALAXY->bind();
+        meshes::CUBE->render();
 
         // water
         waterShader.use();
@@ -315,13 +222,13 @@ int program() {
         int waterSize = 200;
         waterShader.setMatrix4("model", glm::scale(
             glm::translate(
-                glm::mat4(1.0f),
-                glm::vec3(cameraPosition.x - waterSize / 2, 0, cameraPosition.z - waterSize / 2)), 
+            glm::mat4(1.0f),
+            glm::vec3(cameraPosition.x - waterSize / 2, 0, cameraPosition.z - waterSize / 2)), 
             glm::vec3(waterSize, 1, waterSize)
         ));
 
         waterShader.setFloat("t", currTime);
-        plane.render();
+        meshes::PLANE->render();
 
         SDL_GL_SwapWindow(window);
     }

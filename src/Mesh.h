@@ -22,3 +22,12 @@ public:
 
     void render() const;
 };
+
+using MeshPtr = std::unique_ptr<Mesh>;
+
+namespace meshes {
+    extern MeshPtr CUBE;
+    extern MeshPtr PLANE;
+
+    void initialize();
+}

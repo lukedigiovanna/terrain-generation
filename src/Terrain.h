@@ -6,7 +6,7 @@
 #include <unordered_map>
 #include <memory>
 
-#define TERRAIN_RESOLUTION 8 // Number of lattice points in 1 unit along an axis.
+#define TERRAIN_RESOLUTION 1 // Number of lattice points in 1 unit along an axis.
 #define TERRAIN_CELL_SIZE 8
 #define TERRAIN_POINTS_PER_CELL TERRAIN_RESOLUTION * TERRAIN_CELL_SIZE
 #define TERRAIN_RENDER_DISTANCE 8
