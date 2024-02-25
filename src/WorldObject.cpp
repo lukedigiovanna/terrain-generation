@@ -3,6 +3,20 @@
 #include "Mesh.h"
 #include "Texture.h"
 
+#include <glm/gtc/matrix_transform.hpp>
+
+void WorldObject::render(Shader& objectShader) const {
+    objectShader.use();
+    for (const auto & part : model) {
+        glm::mat4 model(1.0f);
+        model = glm::translate(model, pos + part->offsetPosition);
+        model = glm::scale(model, scale + part->scale);
+        objectShader.setMatrix4("model", model);
+        part->texture.bind();
+        part->mesh.render();
+    };
+}
+
 Model models::TREE;
 
 void models::initialize() {

@@ -7,6 +7,7 @@
 
 #include "Mesh.h"
 #include "Texture.h"
+#include "Shader.h"
 
 struct Part {
     Mesh& mesh;
@@ -24,6 +25,8 @@ struct WorldObject {
     glm::vec3 scale;
     glm::vec3 velocity;
     float angle;
+
+    void render(Shader& objectShader) const;
 };
 
 namespace models {

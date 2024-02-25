@@ -18,7 +18,7 @@ static const VertexAttribSet terrainAttributeSet = {
     {GL_FLOAT, 1, sizeof(float)}
 };
 
-enum Texture {
+enum TextureID {
     GRASS=0,
     STONE=1,
     DIRT=2,
@@ -64,12 +64,12 @@ TerrainCell::TerrainCell(int x, int z, int seed) : x(x), z(z) {
             float wi = fi - i / TERRAIN_RESOLUTION;
             float wj = fj - j / TERRAIN_RESOLUTION;
             float triangles[floatsPerLatticeCell] = {
-                fi,     latticePoints[i][j],         fj,      norm1.x, norm1.y, norm1.z,  wi,     wj,       getTexture(latticePoints[i][j]),//getTexture(latticePoints[i][j]),        
-                fi + s, latticePoints[i + 1][j],     fj,      norm1.x, norm1.y, norm1.z,  wi + s, wj,       getTexture(latticePoints[i][j]),//getTexture(latticePoints[i + 1][j]),    
-                fi + s, latticePoints[i + 1][j + 1], fj + s,  norm1.x, norm1.y, norm1.z,  wi + s, wj + s,   getTexture(latticePoints[i][j]),//getTexture(latticePoints[i + 1][j + 1]),
-                fi,     latticePoints[i][j],         fj,      norm2.x, norm2.y, norm2.z,  wi,     wj,       getTexture(latticePoints[i][j]),//getTexture(latticePoints[i][j]),        
-                fi,     latticePoints[i][j + 1],     fj + s,  norm2.x, norm2.y, norm2.z,  wi,     wj + s,   getTexture(latticePoints[i][j]),//getTexture(latticePoints[i][j + 1]),    
-                fi + s, latticePoints[i + 1][j + 1], fj + s,  norm2.x, norm2.y, norm2.z,  wi + s, wj + s,   getTexture(latticePoints[i][j]),//getTexture(latticePoints[i + 1][j + 1]),
+                fi,     latticePoints[i][j],         fj,      norm1.x, norm1.y, norm1.z,  wi,     wj,       getTexture(latticePoints[i][j]),        //getTexture(latticePoints[i][j]),//
+                fi + s, latticePoints[i + 1][j],     fj,      norm1.x, norm1.y, norm1.z,  wi + s, wj,       getTexture(latticePoints[i + 1][j]),    //getTexture(latticePoints[i][j]),//
+                fi + s, latticePoints[i + 1][j + 1], fj + s,  norm1.x, norm1.y, norm1.z,  wi + s, wj + s,   getTexture(latticePoints[i + 1][j + 1]),//getTexture(latticePoints[i][j]),//
+                fi,     latticePoints[i][j],         fj,      norm2.x, norm2.y, norm2.z,  wi,     wj,       getTexture(latticePoints[i][j]),        //getTexture(latticePoints[i][j]),//
+                fi,     latticePoints[i][j + 1],     fj + s,  norm2.x, norm2.y, norm2.z,  wi,     wj + s,   getTexture(latticePoints[i][j + 1]),    //getTexture(latticePoints[i][j]),//
+                fi + s, latticePoints[i + 1][j + 1], fj + s,  norm2.x, norm2.y, norm2.z,  wi + s, wj + s,   getTexture(latticePoints[i + 1][j + 1]),//getTexture(latticePoints[i][j]),//
             };
             for (int i = 0; i < floatsPerLatticeCell; i++) {
                 terrainData[ti + i] = triangles[i];
@@ -78,6 +78,27 @@ TerrainCell::TerrainCell(int x, int z, int seed) : x(x), z(z) {
         }
     }
     mesh = std::make_unique<Mesh>(terrainData, TERRAIN_POINTS_PER_CELL * TERRAIN_POINTS_PER_CELL * 6, terrainAttributeSet);
+
+    // populate with trees
+    for (int i = 0; i < 2; i++) {
+        float wx = math::randf(
+            x * TERRAIN_CELL_SIZE, 
+            (x + 1) * TERRAIN_CELL_SIZE), 
+        wz = math::randf(z * TERRAIN_CELL_SIZE, (z + 1) * TERRAIN_CELL_SIZE);
+        // put a tree there
+        float h = getHeight(wx, wz);
+        if (h < 1.0f) {
+            continue;
+        }
+        WorldObject tree = {
+            models::TREE,
+            glm::vec3(wx,getHeight(wx,wz),wz),
+            glm::vec3(1,1,1),
+            glm::vec3(0,0,0),
+            0,
+        }; 
+        objects.push_back(tree);
+    }
 }
 
 float TerrainCell::getHeight(float x, float z) const {
@@ -102,13 +123,27 @@ Mesh& TerrainCell::getMesh() {
     return *mesh;
 }
 
+void TerrainCell::render(Shader& terrainShader, Shader& objectShader) const {
+    // render terrain mesh
+    glm::mat4 model(1.0f);
+    model = glm::translate(model, glm::vec3(x * TERRAIN_CELL_SIZE, 0, z * TERRAIN_CELL_SIZE));
+    terrainShader.use();
+    terrainShader.setMatrix4("model", model);
+    textures::MINECRAFT->bind();
+    mesh->render();
+    // render world objects
+    for (auto const& object : objects) {
+        object.render(objectShader);
+    }
+}
+
 Terrain::Terrain(int seed) : seed(seed) {
 
 }
 
 #define TERRAIN_HASH(cx, cz) (cx * 32768 + cz)
 
-void Terrain::render(Shader& terrainShader, float x, float z) {
+void Terrain::render(Shader& terrainShader, Shader& objectShader, float x, float z) {
     int cellX = static_cast<int>(x / TERRAIN_CELL_SIZE);
     int cellZ = static_cast<int>(z / TERRAIN_CELL_SIZE);
     for (int cx = cellX - TERRAIN_RENDER_DISTANCE; cx <= cellX + TERRAIN_RENDER_DISTANCE; cx++) {
@@ -120,12 +155,7 @@ void Terrain::render(Shader& terrainShader, float x, float z) {
                 cells.insert_or_assign(hash, std::make_unique<TerrainCell>(cx, cz, seed));
             }
             TerrainCell& tcell = *cells[hash];
-            // setup model matrix
-            glm::mat4 model(1.0f);
-            model = glm::translate(model, glm::vec3(cx * TERRAIN_CELL_SIZE, 0, cz * TERRAIN_CELL_SIZE));
-            terrainShader.setMatrix4("model", model);
-            // render 
-            tcell.getMesh().render();
+            tcell.render(terrainShader, objectShader);
         }
     }  
 }

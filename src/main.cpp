@@ -68,24 +68,9 @@ int program() {
 
     Terrain terrain(3284);
 
-    std::vector<WorldObject> trees;
-    for (int i = 0; i < 100; i++) {
-        // gen random position
-        float x = math::randf(0, 100), y = math::randf(0, 100);
-        // put a tree there
-        WorldObject tree = {
-            models::TREE,
-            glm::vec3(x,terrain.getHeight(x,y),y),
-            glm::vec3(1,1,1),
-            glm::vec3(0,0,0),
-            0,
-        }; 
-        trees.push_back(tree);
-    }
-
     bool gameActive = true;
 
-    glm::vec3 cameraPosition(0.0f, 0.0f, 0.0f);
+    glm::vec3 cameraPosition(1000.0f, 0.0f, 1000.0f);
     glm::vec3 cameraForward(0.0f, 0.0f, -1.0f);
     glm::vec3 cameraRight(1.0f, 0.0f, 0.0f);
     glm::vec3 cameraVelocity(0.0f);
@@ -184,28 +169,13 @@ int program() {
         terrainShader.setMatrix4("projection", proj);
         terrainShader.setMatrix4("view", view);
         terrainShader.setVec2("spriteSheetSize", 24, 34);
-        // terrain
-        textures::MINECRAFT->bind();
-        terrain.render(objectShader, cameraPosition.x, cameraPosition.z);
         
         objectShader.use();
-
         objectShader.setVec3("lightPosition", lightPos);
         objectShader.setMatrix4("projection", proj);
         objectShader.setMatrix4("view", view);
-        objectShader.setMatrix4("model", glm::mat4(1.0f));
 
-        // render the tree model
-        for (const auto & tree : trees) {
-            for (const auto & part : tree.model) {
-                glm::mat4 model(1.0f);
-                model = glm::translate(model, tree.pos + part->offsetPosition);
-                model = glm::scale(model, tree.scale + part->scale);
-                objectShader.setMatrix4("model", model);
-                part->texture.bind();
-                part->mesh.render();
-            };
-        }
+        terrain.render(terrainShader, objectShader, cameraPosition.x, cameraPosition.z);
 
         // skybox
         glm::mat4 model(1.0f);

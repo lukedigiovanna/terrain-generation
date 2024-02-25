@@ -2,11 +2,12 @@
 
 #include "Shader.h"
 #include "Mesh.h"
+#include "WorldObject.h"
 
 #include <unordered_map>
 #include <memory>
 
-#define TERRAIN_RESOLUTION 1 // Number of lattice points in 1 unit along an axis.
+#define TERRAIN_RESOLUTION 2 // Number of lattice points in 1 unit along an axis.
 #define TERRAIN_CELL_SIZE 8
 #define TERRAIN_POINTS_PER_CELL TERRAIN_RESOLUTION * TERRAIN_CELL_SIZE
 #define TERRAIN_RENDER_DISTANCE 8
@@ -17,13 +18,16 @@ private:
     int x, z;
     float latticePoints[TERRAIN_POINTS_PER_CELL + 1][TERRAIN_POINTS_PER_CELL + 1];
     std::unique_ptr<Mesh> mesh;
+
+    std::vector<WorldObject> objects;
 public:
     // calling the constructor will generate the mesh for this terrain cell
     TerrainCell(int x, int z, int seed);
 
     float getHeight(float x, float z) const;
     Mesh& getMesh();
-};
+    void render(Shader& terrainShader, Shader& objectShader) const;
+}; 
 
 class Terrain {
 private:
@@ -36,5 +40,5 @@ public:
     // Queries the terrain cells to find the precise height of the terrain at the given x,z coordinate
     float getHeight(float x, float z);
     // Given some x, z we will render the surrounding cells in their proper place
-    void render(Shader& terrainShader, float x, float z);
+    void render(Shader& terrainShader, Shader& objectShader, float x, float z);
 };
